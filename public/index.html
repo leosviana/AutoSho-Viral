@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radar de oportunidades Shopee</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app">
+        <header class="topbar">
+            <div class="brand">
+                <span class="brand-mark" aria-hidden="true"></span>
+                <div>
+                    <h1>Radar Shopee</h1>
+                    <p class="eyebrow">Radar de oportunidades</p>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <section class="panel">
+                <h2>Catálogo <span class="tag tag-purple">Shopee API</span></h2>
+                <p>Busca produtos por palavra-chave, ordenados por vendas, e salva no banco.</p>
+                <div class="step-input-group">
+                    <label for="keywords">Palavras-chave (separe por vírgula)</label>
+                    <input id="keywords" type="text" placeholder="fone bluetooth, mini processador" autocomplete="off">
+                </div>
+                <div class="step-actions">
+                    <button id="btnSync" class="btn btn-purple" type="button">Sincronizar</button>
+                    <span class="status" id="syncStatus">
+                        <span class="status-dot"></span>
+                        <span class="status-text">Aguardando</span>
+                    </span>
+                </div>
+            </section>
+
+            <section class="panel">
+                <h2>Filtros <span class="tag tag-green">Oportunidade</span></h2>
+                <p>Defina o mínimo de vendas e de comissão. O filtro de afiliados chega em uma próxima versão.</p>
+
+                <div class="step-input-group">
+                    <span class="group-label" id="lblVendas">Quantidade mínima de vendas</span>
+                    <div class="chips" role="group" aria-labelledby="lblVendas" data-filtro="vendasMin">
+                        <button type="button" class="chip" data-valor="500" aria-pressed="true">500+</button>
+                        <button type="button" class="chip" data-valor="1000" aria-pressed="false">1.000+</button>
+                        <button type="button" class="chip" data-valor="5000" aria-pressed="false">5.000+</button>
+                    </div>
+                </div>
+
+                <div class="step-input-group">
+                    <span class="group-label" id="lblComissao">Comissão mínima</span>
+                    <div class="chips" role="group" aria-labelledby="lblComissao" data-filtro="comissaoMin">
+                        <button type="button" class="chip" data-valor="5" aria-pressed="true">5%</button>
+                        <button type="button" class="chip" data-valor="10" aria-pressed="false">10%</button>
+                        <button type="button" class="chip" data-valor="15" aria-pressed="false">15%</button>
+                        <button type="button" class="chip" data-valor="20" aria-pressed="false">20%</button>
+                    </div>
+                </div>
+
+                <div class="filter-row">
+                    <div class="step-input-group">
+                        <label for="ordem">Ordenar resultados</label>
+                        <select id="ordem">
+                            <option value="oportunidade">Melhor oportunidade (vendas × comissão)</option>
+                            <option value="comissao">Maior comissão em reais</option>
+                            <option value="vendas">Mais vendidos</option>
+                        </select>
+                    </div>
+                    <div class="step-input-group">
+                        <label for="busca">Buscar no nome</label>
+                        <input id="busca" type="search" placeholder="Ex.: fone" autocomplete="off">
+                    </div>
+                </div>
+            </section>
+
+            <section class="results" aria-live="polite">
+                <p class="results-count" id="contagem">Carregando…</p>
+                <ul class="product-list" id="lista"></ul>
+            </section>
+
+            <section class="terminal" aria-live="polite">
+                <div class="terminal-head">
+                    <span class="terminal-label">log</span>
+                    <button id="btnLimpar" class="btn-link" type="button">limpar</button>
+                </div>
+                <pre id="log"><span class="log-empty">Nenhuma ação executada ainda.</span></pre>
+            </section>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
