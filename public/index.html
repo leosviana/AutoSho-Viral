@@ -3,95 +3,193 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Radar de oportunidades Shopee</title>
+    <title>Radar Shopee | Análise</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="app">
-        <header class="topbar">
-            <div class="brand">
-                <span class="brand-mark" aria-hidden="true"></span>
-                <div>
-                    <h1>Radar Shopee</h1>
-                    <p class="eyebrow">Radar de oportunidades</p>
+    <div class="app-shell">
+        <main class="workspace">
+          <div id="radarView" class="view-screen">
+            <header class="topbar">
+                <div class="brand">
+                    <span class="brand-mark" aria-hidden="true"></span>
+                    <div>
+                        <p class="eyebrow">Análise / Radar Shopee</p>
+                        <h1>Radar Shopee</h1>
+                    </div>
                 </div>
-            </div>
-        </header>
+                <details class="sync-tools">
+                    <summary>Atualizar catálogo Shopee</summary>
+                    <div class="sync-content">
+                        <label for="keywords">Palavras-chave para sincronizar</label>
+                        <div class="sync-row">
+                            <input id="keywords" type="text" placeholder="fone bluetooth, mini processador" autocomplete="off">
+                            <button id="btnSync" class="btn btn-quiet" type="button">Sincronizar</button>
+                        </div>
+                        <span class="status" id="syncStatus" data-state="idle">
+                            <span class="status-dot"></span>
+                            <span class="status-text">Aguardando</span>
+                        </span>
+                    </div>
+                </details>
+            </header>
 
-        <main>
-            <section class="panel">
-                <h2>Catálogo <span class="tag tag-purple">Shopee API</span></h2>
-                <p>Busca produtos por palavra-chave, ordenados por vendas, e salva no banco.</p>
-                <div class="step-input-group">
-                    <label for="keywords">Palavras-chave (separe por vírgula)</label>
-                    <input id="keywords" type="text" placeholder="fone bluetooth, mini processador" autocomplete="off">
+            <section class="intro">
+                <div>
+                    <span class="section-kicker">OPORTUNIDADES</span>
+                    <h2>Encontre seu próximo produto campeão</h2>
+                    <p>Explore o catálogo e refine os resultados com os indicadores de desempenho.</p>
                 </div>
-                <div class="step-actions">
-                    <button id="btnSync" class="btn btn-purple" type="button">Sincronizar</button>
-                    <span class="status" id="syncStatus">
-                        <span class="status-dot"></span>
-                        <span class="status-text">Aguardando</span>
-                    </span>
-                </div>
+                <span class="tag tag-purple">Shopee API</span>
             </section>
 
-            <section class="panel">
-                <h2>Filtros <span class="tag tag-green">Oportunidade</span></h2>
-                <p>Defina o mínimo de vendas e de comissão. O filtro de afiliados chega em uma próxima versão.</p>
-
-                <div class="step-input-group">
-                    <span class="group-label" id="lblVendas">Quantidade mínima de vendas</span>
-                    <div class="chips" role="group" aria-labelledby="lblVendas" data-filtro="vendasMin">
-                        <button type="button" class="chip" data-valor="500" aria-pressed="true">500+</button>
-                        <button type="button" class="chip" data-valor="1000" aria-pressed="false">1.000+</button>
-                        <button type="button" class="chip" data-valor="5000" aria-pressed="false">5.000+</button>
-                    </div>
+            <form id="filtros" class="panel filter-panel">
+                <div class="search-row">
+                    <label class="sr-only" for="busca">Buscar produto</label>
+                    <span class="search-icon" aria-hidden="true">⌕</span>
+                    <input id="busca" type="search" placeholder="Buscar produto: ex. fone bluetooth" autocomplete="off">
                 </div>
 
-                <div class="step-input-group">
-                    <span class="group-label" id="lblComissao">Comissão mínima</span>
-                    <div class="chips" role="group" aria-labelledby="lblComissao" data-filtro="comissaoMin">
-                        <button type="button" class="chip" data-valor="5" aria-pressed="true">5%</button>
-                        <button type="button" class="chip" data-valor="10" aria-pressed="false">10%</button>
-                        <button type="button" class="chip" data-valor="15" aria-pressed="false">15%</button>
-                        <button type="button" class="chip" data-valor="20" aria-pressed="false">20%</button>
-                    </div>
-                </div>
-
-                <div class="filter-row">
+                <div class="filter-grid">
                     <div class="step-input-group">
-                        <label for="ordem">Ordenar resultados</label>
-                        <select id="ordem">
-                            <option value="oportunidade">Melhor oportunidade (vendas × comissão)</option>
-                            <option value="comissao">Maior comissão em reais</option>
-                            <option value="vendas">Mais vendidos</option>
+                        <label for="categoria">Categorias</label>
+                        <select id="categoria" name="categoria">
+                            <option value="">Todas as categorias</option>
                         </select>
                     </div>
                     <div class="step-input-group">
-                        <label for="busca">Buscar no nome</label>
-                        <input id="busca" type="search" placeholder="Ex.: fone" autocomplete="off">
+                        <fieldset class="range-group">
+                            <legend>Afiliados divulgando o produto</legend>
+                        <div class="range-inputs">
+                            <label>
+                                <span>Mínimo</span>
+                                <input id="afiliadosMin" type="number" min="0" value="0" inputmode="numeric">
+                            </label>
+                            <label>
+                                <span>Máximo</span>
+                                <input id="afiliadosQtdMax" type="number" min="0" value="200" inputmode="numeric">
+                            </label>
+                        </div>
+                        </fieldset>
+                    </div>
+                    <div class="step-input-group">
+                        <label for="vendasMin">Quantidade mínima de vendas</label>
+                        <input id="vendasMin" type="number" min="0" value="500" inputmode="numeric">
+                    </div>
+                    <div class="step-input-group">
+                        <label for="comissaoMin">Comissão mínima (%)</label>
+                        <input id="comissaoMin" type="number" min="0" max="100" step="0.1" value="5" inputmode="decimal">
+                    </div>
+                    <div class="step-input-group">
+                        <label for="ordem">Ordenar resultados</label>
+                        <select id="ordem">
+                            <option value="oportunidade">Melhor oportunidade</option>
+                            <option value="comissao">Maior comissão em reais</option>
+                            <option value="vendas">Mais vendido</option>
+                        </select>
                     </div>
                 </div>
-            </section>
+                <div class="filter-actions">
+                    <button class="btn btn-purple" type="submit">Filtrar</button>
+                    <button id="btnLimparFiltros" class="btn-link" type="reset">Limpar filtros</button>
+                </div>
+            </form>
 
             <section class="results" aria-live="polite">
-                <p class="results-count" id="contagem">Carregando…</p>
+                <div class="results-heading">
+                    <h2>Produtos em destaque</h2>
+                    <p class="results-count" id="contagem">Carregando…</p>
+                </div>
                 <ul class="product-list" id="lista"></ul>
             </section>
 
-            <section class="terminal" aria-live="polite">
-                <div class="terminal-head">
-                    <span class="terminal-label">log</span>
-                    <button id="btnLimpar" class="btn-link" type="button">limpar</button>
+            <details class="terminal">
+                <summary class="terminal-head">
+                    <span class="terminal-label">Atividade</span>
+                    <span class="terminal-hint">Ver registros</span>
+                </summary>
+                <div class="terminal-content">
+                    <button id="btnLimpar" class="btn-link" type="button">Limpar</button>
+                    <pre id="log"><span class="log-empty">Nenhuma ação executada ainda.</span></pre>
                 </div>
-                <pre id="log"><span class="log-empty">Nenhuma ação executada ainda.</span></pre>
-            </section>
-        </main>
-    </div>
+            </details>
+          </div>
 
+          <section id="settingsView" class="settings-view" hidden>
+            <header class="topbar">
+                <div class="brand">
+                    <span class="brand-mark" aria-hidden="true"></span>
+                    <div>
+                        <p class="eyebrow">Configurações / Integrações</p>
+                        <h1>Configurações</h1>
+                    </div>
+                </div>
+            </header>
+
+            <section class="intro">
+                <div>
+                    <span class="section-kicker">INTEGRAÇÕES</span>
+                    <h2>Conecte sua conta de afiliados</h2>
+                    <p>Informe as credenciais da Open API da Shopee para sincronizar produtos.</p>
+                </div>
+                <span class="tag tag-purple">Shopee API</span>
+            </section>
+
+            <form id="shopeeSettingsForm" class="panel settings-card">
+                <h2>Credenciais da API</h2>
+                <p class="settings-description">Encontre o App ID e o App Secret no painel Open API da Shopee.</p>
+                <div class="step-input-group">
+                    <label for="shopeeAppId">App ID</label>
+                    <input id="shopeeAppId" name="appId" type="text" autocomplete="off" spellcheck="false" placeholder="Informe o App ID">
+                </div>
+                <div class="step-input-group">
+                    <label for="shopeeAppSecret">App Secret</label>
+                    <input id="shopeeAppSecret" name="appSecret" type="password" autocomplete="new-password" placeholder="Informe o App Secret">
+                </div>
+                <p class="settings-help">As credenciais são armazenadas no servidor, no arquivo local .env, e nunca são exibidas novamente.</p>
+                <div id="shopeeConfigStatus" class="config-status" role="status">Verificando configuração…</div>
+                <div class="settings-actions">
+                    <button id="btnTestShopee" class="btn btn-quiet" type="button">Testar conexão</button>
+                    <button id="btnSaveShopee" class="btn btn-purple" type="submit">Testar e salvar</button>
+                </div>
+                <p id="shopeeTestResult" class="connection-message" role="status" aria-live="polite"></p>
+            </form>
+          </section>
+        </main>
+
+        <aside class="side-panel" aria-label="Navegação principal">
+            <a class="side-brand" href="#" aria-label="Radar Shopee início">
+                <span class="brand-mark" aria-hidden="true"></span>
+                <span>RADAR</span>
+            </a>
+            <nav>
+                <p class="nav-heading">MENU</p>
+                <button class="nav-section" type="button" aria-expanded="true">
+                    <span class="nav-icon" aria-hidden="true">◈</span>
+                    <span>Análise</span>
+                    <span class="nav-chevron" aria-hidden="true">⌄</span>
+                </button>
+                <a class="nav-item active" href="#radar" data-view="radar" aria-current="page">
+                    <span class="nav-indicator" aria-hidden="true"></span>
+                    Radar Shopee
+                </a>
+                <a class="nav-item settings-nav-item" href="#configuracoes" data-view="settings">
+                    <svg class="settings-icon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"/>
+                        <path d="m19.4 15 .1.1a1.8 1.8 0 1 1-2.5 2.5l-.1-.1a1.8 1.8 0 0 0-3 .9v.2a1.8 1.8 0 1 1-3.6 0v-.2a1.8 1.8 0 0 0-3-.9l-.1.1a1.8 1.8 0 1 1-2.5-2.5l.1-.1a1.8 1.8 0 0 0-.9-3h-.2a1.8 1.8 0 1 1 0-3.6h.2a1.8 1.8 0 0 0 .9-3l-.1-.1a1.8 1.8 0 1 1 2.5-2.5l.1.1a1.8 1.8 0 0 0 3-.9v-.2a1.8 1.8 0 1 1 3.6 0v.2a1.8 1.8 0 0 0 3 .9l.1-.1a1.8 1.8 0 1 1 2.5 2.5l-.1.1a1.8 1.8 0 0 0 .9 3h.2a1.8 1.8 0 1 1 0 3.6h-.2a1.8 1.8 0 0 0-.9 3Z"/>
+                    </svg>
+                    <span>Configurações</span>
+                </a>
+            </nav>
+            <div class="side-footer">
+                <span class="online-dot" aria-hidden="true"></span>
+                Catálogo Shopee
+            </div>
+        </aside>
+    </div>
     <script src="app.js"></script>
 </body>
 </html>

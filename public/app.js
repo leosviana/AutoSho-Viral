@@ -1,6 +1,14 @@
 const $ = (seletor) => document.querySelector(seletor);
 
-const estado = { vendasMin: 500, comissaoMin: 5, ordem: 'oportunidade', busca: '' };
+const estado = {
+  vendasMin: 500,
+  comissaoMin: 5,
+  ordem: 'oportunidade',
+  busca: '',
+  categoria: '',
+  afiliadosMin: 0,
+  afiliadosQtdMax: 200,
+};
 
 const moeda = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 const inteiro = new Intl.NumberFormat('pt-BR');
@@ -84,6 +92,10 @@ function criarCard(p) {
   const partes = [moeda.format(p.preco)];
   if (p.nota > 0) partes.push(`nota ${decimal.format(p.nota)}`);
   if (p.loja) partes.push(p.loja);
+  if (p.categoria) partes.push(p.categoria);
+  if (Number.isFinite(p.afiliadosEstimados)) {
+    partes.push(`${inteiro.format(p.afiliadosEstimados)} afiliados`);
+  }
   extra.textContent = partes.join(' · ');
 
   info.append(titulo, meta, extra);
@@ -119,30 +131,57 @@ async function carregar() {
   }
 }
 
-// ---------- Filtros ----------
+// ---------- Filtros e categorias ----------
 
-document.querySelectorAll('.chips').forEach((grupo) => {
-  grupo.addEventListener('click', (evento) => {
-    const chip = evento.target.closest('.chip');
-    if (!chip) return;
-    grupo.querySelectorAll('.chip').forEach((c) => c.setAttribute('aria-pressed', String(c === chip)));
-    estado[grupo.dataset.filtro] = Number(chip.dataset.valor);
-    carregar();
-  });
-});
+async function carregarCategorias() {
+  const seletor = $('#categoria');
+  try {
+    const { categorias } = await chamarApi('/api/categorias');
+    const selecionada = seletor.value;
+    seletor.replaceChildren(new Option('Todas as categorias', ''));
+    categorias.forEach((categoria) => {
+      const option = document.createElement('option');
+      option.value = categoria;
+      option.textContent = categoria;
+      seletor.appendChild(option);
+    });
+    seletor.value = categorias.includes(selecionada) ? selecionada : '';
+  } catch (e) {
+    log(`Não foi possível carregar categorias: ${e.message}`, 'error');
+  }
+}
 
-$('#ordem').addEventListener('change', (e) => {
-  estado.ordem = e.target.value;
+$('#filtros').addEventListener('submit', (e) => {
+  e.preventDefault();
+  estado.busca = $('#busca').value.trim();
+  estado.categoria = $('#categoria').value;
+  estado.afiliadosMin = Number($('#afiliadosMin').value) || 0;
+  estado.afiliadosQtdMax = Number($('#afiliadosQtdMax').value) || 0;
+  estado.vendasMin = Number($('#vendasMin').value) || 0;
+  estado.comissaoMin = Number($('#comissaoMin').value) || 0;
+  estado.ordem = $('#ordem').value;
   carregar();
 });
 
-let espera;
-$('#busca').addEventListener('input', (e) => {
-  clearTimeout(espera);
-  espera = setTimeout(() => {
-    estado.busca = e.target.value.trim();
-    carregar();
-  }, 350);
+$('#filtros').addEventListener('reset', (e) => {
+  e.preventDefault();
+  Object.assign(estado, {
+    vendasMin: 500,
+    comissaoMin: 5,
+    ordem: 'oportunidade',
+    busca: '',
+    categoria: '',
+    afiliadosMin: 0,
+    afiliadosQtdMax: 200,
+  });
+  $('#busca').value = '';
+  $('#categoria').value = '';
+  $('#afiliadosMin').value = '0';
+  $('#afiliadosQtdMax').value = '200';
+  $('#vendasMin').value = '500';
+  $('#comissaoMin').value = '5';
+  $('#ordem').value = 'oportunidade';
+  carregar();
 });
 
 // ---------- Sincronização ----------
@@ -167,6 +206,7 @@ $('#btnSync').addEventListener('click', async () => {
     });
     definirStatus('success', `${inteiro.format(total)} produtos salvos`);
     log(`${inteiro.format(total)} produtos salvos no banco.`, 'ok');
+    await carregarCategorias();
     await carregar();
   } catch (e) {
     definirStatus('error', 'Falhou');
@@ -180,4 +220,101 @@ $('#btnLimpar').addEventListener('click', () => {
   $('#log').innerHTML = '<span class="log-empty">Nenhuma ação executada ainda.</span>';
 });
 
+// ---------- Navegação e integração Shopee ----------
+
+function mostrarTela(tela) {
+  const configuracoes = tela === 'settings';
+  $('#radarView').hidden = configuracoes;
+  $('#settingsView').hidden = !configuracoes;
+  document.querySelectorAll('.nav-item[data-view]').forEach((item) => {
+    const ativo = item.dataset.view === tela;
+    item.classList.toggle('active', ativo);
+    if (ativo) item.setAttribute('aria-current', 'page');
+    else item.removeAttribute('aria-current');
+  });
+  document.title = configuracoes ? 'Configurações | Radar Shopee' : 'Radar Shopee | Análise';
+  if (configuracoes) carregarStatusShopee();
+}
+
+document.querySelectorAll('.nav-item[data-view]').forEach((item) => {
+  item.addEventListener('click', (e) => {
+    e.preventDefault();
+    const destino = item.dataset.view;
+    const hash = destino === 'settings' ? '#configuracoes' : '#radar';
+    if (location.hash !== hash) location.hash = hash;
+    else mostrarTela(destino);
+  });
+});
+
+window.addEventListener('hashchange', () => {
+  mostrarTela(location.hash === '#configuracoes' ? 'settings' : 'radar');
+});
+
+function atualizarStatusShopee(configuracao) {
+  const status = $('#shopeeConfigStatus');
+  if (configuracao.configurado) {
+    status.textContent = `Credenciais configuradas · App ID ${configuracao.appIdMascarado}`;
+    status.dataset.state = 'success';
+  } else {
+    status.textContent = 'API ainda não configurada neste servidor.';
+    status.dataset.state = 'idle';
+  }
+}
+
+async function carregarStatusShopee() {
+  try {
+    atualizarStatusShopee(await chamarApi('/api/config/shopee'));
+  } catch (e) {
+    $('#shopeeConfigStatus').textContent = `Não foi possível verificar a configuração: ${e.message}`;
+    $('#shopeeConfigStatus').dataset.state = 'error';
+  }
+}
+
+async function testarOuSalvarShopee(salvar) {
+  const botaoTeste = $('#btnTestShopee');
+  const botaoSalvar = $('#btnSaveShopee');
+  const resultado = $('#shopeeTestResult');
+  const appId = $('#shopeeAppId').value.trim();
+  const appSecret = $('#shopeeAppSecret').value;
+  if (salvar && (!appId || !appSecret)) {
+    resultado.textContent = 'Informe o App ID e o App Secret para salvar.';
+    resultado.dataset.state = 'error';
+    return;
+  }
+
+  botaoTeste.disabled = true;
+  botaoSalvar.disabled = true;
+  resultado.textContent = 'Testando conexão com a API Shopee…';
+  resultado.dataset.state = 'running';
+  try {
+    const endpoint = salvar ? '/api/config/shopee' : '/api/config/shopee/testar';
+    const resposta = await chamarApi(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ appId, appSecret }),
+    });
+    resultado.textContent = resposta.mensagem;
+    resultado.dataset.state = 'success';
+    atualizarStatusShopee(resposta.configuracao);
+    if (salvar) {
+      $('#shopeeAppId').value = '';
+      $('#shopeeAppSecret').value = '';
+    }
+  } catch (e) {
+    resultado.textContent = `Falha na conexão: ${e.message}`;
+    resultado.dataset.state = 'error';
+  } finally {
+    botaoTeste.disabled = false;
+    botaoSalvar.disabled = false;
+  }
+}
+
+$('#btnTestShopee').addEventListener('click', () => testarOuSalvarShopee(false));
+$('#shopeeSettingsForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  testarOuSalvarShopee(true);
+});
+
+mostrarTela(location.hash === '#configuracoes' ? 'settings' : 'radar');
+carregarCategorias();
 carregar();
