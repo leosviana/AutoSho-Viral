@@ -38,7 +38,12 @@ function definirStatus(situacao, texto) {
 async function chamarApi(url, opcoes) {
   const resposta = await fetch(url, opcoes);
   const dados = await resposta.json().catch(() => ({}));
-  if (!resposta.ok) throw new Error(dados.erro || `Erro ${resposta.status}`);
+  if (!resposta.ok) {
+    if (url.startsWith('/api/config/') && [404, 405].includes(resposta.status)) {
+      throw new Error('O servidor atual não reconhece esta rota. Inicie o Radar com npm run dev e abra http://localhost:3000; não use o Live Server.');
+    }
+    throw new Error(dados.erro || `Erro ${resposta.status}`);
+  }
   return dados;
 }
 
@@ -233,7 +238,10 @@ function mostrarTela(tela) {
     else item.removeAttribute('aria-current');
   });
   document.title = configuracoes ? 'Configurações | Radar Shopee' : 'Radar Shopee | Análise';
-  if (configuracoes) carregarStatusShopee();
+  if (configuracoes) {
+    carregarStatusIntegracao('shopee');
+    carregarStatusIntegracao('gemini');
+  }
 }
 
 document.querySelectorAll('.nav-item[data-view]').forEach((item) => {
@@ -250,56 +258,86 @@ window.addEventListener('hashchange', () => {
   mostrarTela(location.hash === '#configuracoes' ? 'settings' : 'radar');
 });
 
-function atualizarStatusShopee(configuracao) {
-  const status = $('#shopeeConfigStatus');
+const integracoes = {
+  shopee: {
+    nome: 'Shopee',
+    campos: ['shopeeAppId', 'shopeeAppSecret'],
+    status: 'shopeeConfigStatus',
+    resultado: 'shopeeTestResult',
+    teste: 'btnTestShopee',
+    salvar: 'btnSaveShopee',
+    formulario: 'shopeeSettingsForm',
+  },
+  gemini: {
+    nome: 'Gemini',
+    campos: ['geminiApiKey'],
+    status: 'geminiConfigStatus',
+    resultado: 'geminiTestResult',
+    teste: 'btnTestGemini',
+    salvar: 'btnSaveGemini',
+    formulario: 'geminiSettingsForm',
+  },
+};
+
+function atualizarStatusIntegracao(tipo, configuracao) {
+  const integracao = integracoes[tipo];
+  const status = $(`#${integracao.status}`);
   if (configuracao.configurado) {
-    status.textContent = `Credenciais configuradas · App ID ${configuracao.appIdMascarado}`;
+    const identificador = tipo === 'shopee'
+      ? `App ID ${configuracao.appIdMascarado}`
+      : `chave ${configuracao.chaveMascarada}`;
+    status.textContent = `${integracao.nome} configurada · ${identificador}`;
     status.dataset.state = 'success';
   } else {
-    status.textContent = 'API ainda não configurada neste servidor.';
+    status.textContent = `${integracao.nome} ainda não configurada neste servidor.`;
     status.dataset.state = 'idle';
   }
 }
 
-async function carregarStatusShopee() {
+async function carregarStatusIntegracao(tipo) {
+  const integracao = integracoes[tipo];
   try {
-    atualizarStatusShopee(await chamarApi('/api/config/shopee'));
+    atualizarStatusIntegracao(tipo, await chamarApi(`/api/config/${tipo}`));
   } catch (e) {
-    $('#shopeeConfigStatus').textContent = `Não foi possível verificar a configuração: ${e.message}`;
-    $('#shopeeConfigStatus').dataset.state = 'error';
+    const status = $(`#${integracao.status}`);
+    status.textContent = `Não foi possível verificar a configuração: ${e.message}`;
+    status.dataset.state = 'error';
   }
 }
 
-async function testarOuSalvarShopee(salvar) {
-  const botaoTeste = $('#btnTestShopee');
-  const botaoSalvar = $('#btnSaveShopee');
-  const resultado = $('#shopeeTestResult');
-  const appId = $('#shopeeAppId').value.trim();
-  const appSecret = $('#shopeeAppSecret').value;
-  if (salvar && (!appId || !appSecret)) {
-    resultado.textContent = 'Informe o App ID e o App Secret para salvar.';
+async function testarOuSalvarIntegracao(tipo, salvar) {
+  const integracao = integracoes[tipo];
+  const botaoTeste = $(`#${integracao.teste}`);
+  const botaoSalvar = $(`#${integracao.salvar}`);
+  const resultado = $(`#${integracao.resultado}`);
+  const valores = integracao.campos.map((id) => $(`#${id}`).value);
+  const corpo = tipo === 'shopee'
+    ? { appId: valores[0].trim(), appSecret: valores[1] }
+    : { apiKey: valores[0].trim() };
+  const preenchidos = Object.values(corpo).every(Boolean);
+  if (salvar && !preenchidos) {
+    resultado.textContent = tipo === 'shopee'
+      ? 'Informe o App ID e o App Secret para salvar.'
+      : 'Informe a chave de API para salvar.';
     resultado.dataset.state = 'error';
     return;
   }
 
   botaoTeste.disabled = true;
   botaoSalvar.disabled = true;
-  resultado.textContent = 'Testando conexão com a API Shopee…';
+  resultado.textContent = `Testando conexão com ${integracao.nome}…`;
   resultado.dataset.state = 'running';
   try {
-    const endpoint = salvar ? '/api/config/shopee' : '/api/config/shopee/testar';
+    const endpoint = salvar ? `/api/config/${tipo}` : `/api/config/${tipo}/testar`;
     const resposta = await chamarApi(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ appId, appSecret }),
+      body: JSON.stringify(corpo),
     });
     resultado.textContent = resposta.mensagem;
     resultado.dataset.state = 'success';
-    atualizarStatusShopee(resposta.configuracao);
-    if (salvar) {
-      $('#shopeeAppId').value = '';
-      $('#shopeeAppSecret').value = '';
-    }
+    atualizarStatusIntegracao(tipo, resposta.configuracao);
+    if (salvar) integracao.campos.forEach((id) => { $(`#${id}`).value = ''; });
   } catch (e) {
     resultado.textContent = `Falha na conexão: ${e.message}`;
     resultado.dataset.state = 'error';
@@ -309,10 +347,13 @@ async function testarOuSalvarShopee(salvar) {
   }
 }
 
-$('#btnTestShopee').addEventListener('click', () => testarOuSalvarShopee(false));
-$('#shopeeSettingsForm').addEventListener('submit', (e) => {
-  e.preventDefault();
-  testarOuSalvarShopee(true);
+Object.keys(integracoes).forEach((tipo) => {
+  const integracao = integracoes[tipo];
+  $(`#${integracao.teste}`).addEventListener('click', () => testarOuSalvarIntegracao(tipo, false));
+  $(`#${integracao.formulario}`).addEventListener('submit', (e) => {
+    e.preventDefault();
+    testarOuSalvarIntegracao(tipo, true);
+  });
 });
 
 mostrarTela(location.hash === '#configuracoes' ? 'settings' : 'radar');

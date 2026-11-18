@@ -1,6 +1,5 @@
 const crypto = require('crypto');
-const fs = require('fs');
-const path = require('path');
+const { salvarVariaveisEnv } = require('./env-store');
 
 const ENDPOINT = process.env.SHOPEE_ENDPOINT || 'https://open-api.affiliate.shopee.com.br/graphql';
 
@@ -106,26 +105,7 @@ async function testarConexao(configuracao) {
 
 function salvarCredenciais(configuracao) {
   const { appId, secret } = credenciais(configuracao);
-  const caminhoEnv = path.resolve(__dirname, '..', '.env');
-  const conteudoAtual = fs.existsSync(caminhoEnv) ? fs.readFileSync(caminhoEnv, 'utf8') : '';
-  const linhas = conteudoAtual
-    .split(/\r?\n/)
-    .filter((linha) => !/^\uFEFF?\s*SHOPEE_APP_(ID|SECRET)\s*=/.test(linha));
-  const extras = [
-    `SHOPEE_APP_ID=${JSON.stringify(appId)}`,
-    `SHOPEE_APP_SECRET=${JSON.stringify(secret)}`,
-  ];
-  const conteudo = `${linhas.join('\n').replace(/\n+$/, '')}\n${extras.join('\n')}\n`;
-  const temporario = `${caminhoEnv}.${process.pid}.${crypto.randomBytes(6).toString('hex')}.tmp`;
-
-  try {
-    fs.writeFileSync(temporario, conteudo, { encoding: 'utf8', mode: 0o600 });
-    fs.renameSync(temporario, caminhoEnv);
-  } catch (erro) {
-    if (fs.existsSync(temporario)) fs.unlinkSync(temporario);
-    throw erro;
-  }
-
+  salvarVariaveisEnv({ SHOPEE_APP_ID: appId, SHOPEE_APP_SECRET: secret });
   process.env.SHOPEE_APP_ID = appId;
   process.env.SHOPEE_APP_SECRET = secret;
   return obterStatusCredenciais();

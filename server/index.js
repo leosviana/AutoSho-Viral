@@ -3,6 +3,11 @@ require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
 const express = require('express');
 const { db } = require('./firebase');
 const {
+  obterStatus: obterStatusGemini,
+  salvarChave: salvarChaveGemini,
+  testarConexao: testarConexaoGemini,
+} = require('./gemini');
+const {
   buscarProdutos,
   obterStatusCredenciais,
   salvarCredenciais,
@@ -10,7 +15,7 @@ const {
 } = require('./shopee');
 
 const app = express();
-const colecao = db.collection('produtos');
+const colecao = db ? db.collection('produtos') : null;
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'public')));
@@ -42,7 +47,14 @@ function apenasLocal(req, res, next) {
 let cache = null;
 const CACHE_MS = 60 * 1000;
 
+function erroFirebaseIndisponivel() {
+  const erro = new Error('Firebase não configurado. Adicione a credencial para habilitar o catálogo Shopee.');
+  erro.status = 503;
+  return erro;
+}
+
 async function lerProdutos() {
+  if (!colecao) throw erroFirebaseIndisponivel();
   if (cache && Date.now() - cache.em < CACHE_MS) return cache.lista;
   const snap = await colecao.get();
   const lista = snap.docs.map((d) => {
@@ -126,13 +138,63 @@ app.post('/api/config/shopee', apenasLocal, async (req, res) => {
   }
 });
 
+app.get('/api/config/gemini', apenasLocal, (_req, res) => {
+  res.json(obterStatusGemini());
+});
+
+app.post('/api/config/gemini/testar', apenasLocal, async (req, res) => {
+  const corpo = req.body || {};
+  if (corpo.apiKey !== undefined && typeof corpo.apiKey !== 'string') {
+    return res.status(400).json({ erro: 'A chave informada é inválida.' });
+  }
+  const apiKey = typeof corpo.apiKey === 'string' ? corpo.apiKey.trim() : '';
+  if (/[\r\n]/.test(apiKey)) return res.status(400).json({ erro: 'A chave informada é inválida.' });
+
+  try {
+    await testarConexaoGemini(apiKey ? { apiKey } : undefined);
+    res.json({
+      ok: true,
+      mensagem: 'Conexão com o Gemini validada.',
+      configuracao: obterStatusGemini(),
+    });
+  } catch (e) {
+    const status = e.message.startsWith('Informe uma chave') ? 400 : 502;
+    res.status(status).json({ erro: e.message });
+  }
+});
+
+app.post('/api/config/gemini', apenasLocal, async (req, res) => {
+  const corpo = req.body || {};
+  const apiKey = typeof corpo.apiKey === 'string' ? corpo.apiKey.trim() : '';
+  if (!apiKey || /[\r\n]/.test(apiKey)) {
+    return res.status(400).json({ erro: 'Informe uma chave de API do Gemini válida.' });
+  }
+
+  try {
+    await testarConexaoGemini({ apiKey });
+  } catch (e) {
+    return res.status(502).json({ erro: e.message });
+  }
+
+  try {
+    const configuracao = salvarChaveGemini(apiKey);
+    res.json({
+      ok: true,
+      mensagem: 'Conexão validada e chave do Gemini salva no arquivo .env local.',
+      configuracao,
+    });
+  } catch (e) {
+    res.status(500).json({ erro: `Conexão validada, mas não foi possível salvar a chave: ${e.message}` });
+  }
+});
+
 app.get('/api/categorias', async (_req, res) => {
   try {
     const categorias = [...new Set((await lerProdutos()).map(categoriaProduto).filter(Boolean))]
       .sort((a, b) => a.localeCompare(b, 'pt-BR'));
     res.json({ categorias });
   } catch (e) {
-    res.status(500).json({ erro: e.message });
+    res.status(e.status || 500).json({ erro: e.message });
   }
 });
 
@@ -169,7 +231,7 @@ app.get('/api/produtos', async (req, res) => {
     filtrados.sort(criterio);
     res.json({ total: filtrados.length, produtos: filtrados.slice(0, limite) });
   } catch (e) {
-    res.status(500).json({ erro: e.message });
+    res.status(e.status || 500).json({ erro: e.message });
   }
 });
 
@@ -182,6 +244,7 @@ app.post('/api/sync', async (req, res) => {
   const paginas = limitar(req.body.paginas, 1, 10, 3);
 
   if (!palavras.length) return res.status(400).json({ erro: 'Informe ao menos uma palavra-chave.' });
+  if (!colecao) return res.status(503).json({ erro: erroFirebaseIndisponivel().message });
 
   try {
     const unicos = new Map();

@@ -685,12 +685,27 @@ body { min-width: 320px; }
     margin: 0 auto;
 }
 .settings-view > .topbar { margin-bottom: 42px; }
+.integration-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
 .settings-card {
     width: 100%;
-    max-width: 720px;
-    margin: 0 auto;
+    min-width: 0;
+    max-width: none;
+    margin: 0;
     padding: 24px;
 }
+.integration-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 22px;
+}
+.integration-heading .settings-description { margin: 6px 0 0; }
+.integration-heading .tag { flex: 0 0 auto; margin-top: 2px; }
 .settings-card h2 {
     display: block;
     margin: 0 0 6px;
@@ -703,6 +718,8 @@ body { min-width: 320px; }
 }
 .settings-description { margin: 0 0 22px; }
 .settings-help { margin: -4px 0 18px; }
+.settings-help a { color: var(--purple); text-underline-offset: 3px; }
+.settings-help a:hover { color: var(--text); }
 .settings-card .step-input-group { margin-bottom: 18px; }
 .settings-card .step-input-group input {
     width: 100%;
@@ -736,6 +753,10 @@ body { min-width: 320px; }
 .connection-message[data-state="running"] { color: var(--amber); }
 .connection-message[data-state="success"] { color: var(--green); }
 .connection-message[data-state="error"] { color: var(--coral); }
+
+@media (max-width: 900px) {
+    .integration-grid { grid-template-columns: 1fr; }
+}
 
 @media (max-width: 640px) {
     .settings-view > .topbar { margin-bottom: 30px; }
