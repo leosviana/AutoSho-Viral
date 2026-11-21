@@ -1,7 +1,9 @@
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
 const express = require('express');
-const { db } = require('./firebase');
+const { db, realtimeDb, databaseUrl } = require('./firebase');
+const { gerarIdInfluencer, normalizarInfluencer } = require('./influencer');
+const criarPromptInfluencer = require('../public/prompt-influencer');
 const {
   obterStatus: obterStatusGemini,
   salvarChave: salvarChaveGemini,
@@ -17,8 +19,23 @@ const {
 const app = express();
 const colecao = db ? db.collection('produtos') : null;
 
-app.use(express.json());
+app.use(express.json({
+  type: (req) => req.path !== '/api/influencers' && Boolean(req.is('application/json')),
+}));
 app.use(express.static(path.join(__dirname, '..', 'public')));
+
+const jsonInfluencerParser = express.json({ limit: '10mb' });
+
+function parseJsonInfluencer(req, res, next) {
+  jsonInfluencerParser(req, res, (erro) => {
+    if (!erro) return next();
+    const status = erro.status === 413 ? 413 : 400;
+    const mensagem = status === 413
+      ? 'Os uploads excedem o limite permitido. Reduza o tamanho das imagens e tente novamente.'
+      : 'O formulário enviado não contém um JSON válido.';
+    res.status(status).json({ erro: mensagem });
+  });
+}
 
 function apenasLocal(req, res, next) {
   const ip = req.socket.remoteAddress || '';
@@ -185,6 +202,133 @@ app.post('/api/config/gemini', apenasLocal, async (req, res) => {
     });
   } catch (e) {
     res.status(500).json({ erro: `Conexão validada, mas não foi possível salvar a chave: ${e.message}` });
+  }
+});
+
+app.get('/api/config/firebase', apenasLocal, (_req, res) => {
+  res.json({ configurado: Boolean(realtimeDb), databaseUrl });
+});
+
+app.post('/api/config/firebase/testar', apenasLocal, async (_req, res) => {
+  if (!realtimeDb) {
+    return res.status(503).json({
+      erro: 'Credencial Firebase ausente. Adicione o arquivo de conta de serviço configurado em FIREBASE_SERVICE_ACCOUNT.',
+    });
+  }
+
+  try {
+    await realtimeDb.ref('_connectionTest').get();
+    res.json({ ok: true, mensagem: 'Conexão com o Realtime Database realizada com sucesso.' });
+  } catch (e) {
+    console.error('Falha ao testar conexão com o Realtime Database:', e);
+    res.status(502).json({
+      erro: 'Não foi possível acessar o Realtime Database. Verifique a credencial, a URL e a conexão de rede.',
+    });
+  }
+});
+
+function erroRequisicao(status, mensagem) {
+  const erro = new Error(mensagem);
+  erro.status = status;
+  return erro;
+}
+
+function assinaturaImagemValida(buffer, tipo) {
+  if (tipo === 'image/jpeg') return buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+  if (tipo === 'image/png') return buffer.subarray(0, 8).equals(Buffer.from('89504e470d0a1a0a', 'hex'));
+  if (tipo === 'image/webp') {
+    return buffer.length >= 12
+      && buffer.toString('ascii', 0, 4) === 'RIFF'
+      && buffer.toString('ascii', 8, 12) === 'WEBP';
+  }
+  return false;
+}
+
+function validarImagemUpload(valor) {
+  const dados = typeof valor === 'string'
+    ? /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/]+={0,2})$/i.exec(valor)
+    : null;
+  if (!dados) throw erroRequisicao(400, 'Envie uma imagem JPEG, PNG ou WebP válida.');
+
+  const tipo = dados[1].toLowerCase();
+  const buffer = Buffer.from(dados[2], 'base64');
+  if (!buffer.length || buffer.length > 2 * 1024 * 1024) {
+    throw erroRequisicao(400, 'A imagem deve ter no máximo 2 MB após a compressão.');
+  }
+  if (!assinaturaImagemValida(buffer, tipo)) {
+    throw erroRequisicao(400, 'O conteúdo da imagem não corresponde ao formato informado.');
+  }
+  return `data:${tipo};base64,${buffer.toString('base64')}`;
+}
+
+app.get('/api/influencers', apenasLocal, async (_req, res) => {
+  if (!realtimeDb) return res.status(503).json({ erro: 'Firebase não configurado. O histórico está indisponível.' });
+
+  try {
+    const snapshot = await realtimeDb.ref('influencer').get();
+    const influencers = Object.values(snapshot.val() || {})
+      .filter((influencer) => influencer && typeof influencer.id === 'string')
+      .sort((a, b) => String(a.criadoEm || '').localeCompare(String(b.criadoEm || '')))
+      .slice(-3)
+      .map((influencer) => ({
+        ...influencer,
+        id: influencer.id,
+        nome: influencer.nome || 'Influencer',
+        imagem_upload: typeof influencer.imagem_upload === 'string' ? influencer.imagem_upload : '',
+      }));
+    res.json({ influencers });
+  } catch (e) {
+    console.error('Falha ao carregar histórico de influencers:', e);
+    res.status(500).json({ erro: 'Não foi possível carregar o histórico de influencers.' });
+  }
+});
+
+app.post('/api/influencers', apenasLocal, parseJsonInfluencer, async (req, res) => {
+  let influencer;
+  let imagemUpload;
+  try {
+    influencer = normalizarInfluencer(req.body);
+    imagemUpload = influencer.origem === 'foto'
+      ? validarImagemUpload(req.body.imagem_upload)
+      : '';
+  } catch (e) {
+    return res.status(e.status || 400).json({ erro: e.message });
+  }
+
+  if (!realtimeDb) {
+    return res.status(503).json({ erro: 'Firebase não configurado. Não foi possível salvar o influencer.' });
+  }
+
+  const agora = new Date();
+  const id = gerarIdInfluencer(agora);
+  const registroRef = realtimeDb.ref('influencer').child(id);
+
+  const registro = {
+    id,
+    ...influencer,
+    imagem_upload: imagemUpload,
+    promptInfluencer: criarPromptInfluencer({
+      ...influencer,
+      fotoOrigemAnexada: Boolean(imagemUpload),
+    }),
+    criadoEm: agora.toISOString(),
+  };
+
+  try {
+    const resultado = await registroRef.transaction((registroAtual) => (
+      registroAtual === null ? registro : undefined
+    ));
+    if (!resultado.committed) {
+      return res.status(409).json({
+        erro: 'Já existe um registro com este ID de data e hora. Aguarde um segundo e tente novamente.',
+      });
+    }
+    const influencerResposta = { ...registro };
+    delete influencerResposta.imagem_upload;
+    res.status(201).json({ ok: true, influencer: influencerResposta });
+  } catch (e) {
+    console.error('Falha ao salvar influencer:', e);
+    res.status(e.status || 500).json({ erro: e.message || 'Não foi possível salvar o influencer.' });
   }
 });
 

@@ -118,6 +118,242 @@
             </details>
           </div>
 
+          <section id="influencerView" class="settings-view creator-view" hidden>
+            <header class="topbar">
+                <div class="brand">
+                    <span class="brand-mark" aria-hidden="true"></span>
+                    <div>
+                        <p class="eyebrow">Criar / Influencer</p>
+                        <h1>Criar influencer</h1>
+                    </div>
+                </div>
+            </header>
+
+            <section class="intro">
+                <div>
+                    <span class="section-kicker">NOVO PERSONAGEM</span>
+                    <h2>Defina as características do influencer</h2>
+                    <p>Os campos opcionais deixados vazios serão preenchidos aleatoriamente ao salvar.</p>
+                </div>
+                <span class="tag tag-purple">Firebase</span>
+            </section>
+
+            <form id="influencerForm" class="creator-form" novalidate>
+                <section class="panel creator-section">
+                    <header class="creator-section-heading">
+                        <div>
+                            <h2>Histórico de influencers</h2>
+                            <p>Selecione um dos três influencers criados anteriormente.</p>
+                        </div>
+                    </header>
+                    <div class="influencer-image-options" id="influencerHistory" aria-label="Histórico e origem do personagem">
+                        <button class="history-image-card" type="button" data-slot="1" aria-pressed="true">
+                            <span class="portrait-frame">
+                                <img class="history-image" alt="" hidden>
+                                <svg class="avatar-placeholder" viewBox="0 0 24 24" aria-hidden="true">
+                                    <circle cx="12" cy="8" r="3.5"/>
+                                    <path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>
+                                </svg>
+                            </span>
+                            <span class="history-image-title">Imagem influencer 1</span>
+                            <span class="history-image-name">Ainda vazio</span>
+                            <span class="history-selected-label">Selecionada</span>
+                        </button>
+                        <button class="history-image-card" type="button" data-slot="2" aria-pressed="false">
+                            <span class="portrait-frame">
+                                <img class="history-image" alt="" hidden>
+                                <svg class="avatar-placeholder" viewBox="0 0 24 24" aria-hidden="true">
+                                    <circle cx="12" cy="8" r="3.5"/>
+                                    <path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>
+                                </svg>
+                            </span>
+                            <span class="history-image-title">Imagem influencer 2</span>
+                            <span class="history-image-name">Ainda vazio</span>
+                            <span class="history-selected-label">Selecionada</span>
+                        </button>
+                        <button class="history-image-card" type="button" data-slot="3" aria-pressed="false">
+                            <span class="portrait-frame">
+                                <img class="history-image" alt="" hidden>
+                                <svg class="avatar-placeholder" viewBox="0 0 24 24" aria-hidden="true">
+                                    <circle cx="12" cy="8" r="3.5"/>
+                                    <path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>
+                                </svg>
+                            </span>
+                            <span class="history-image-title">Imagem influencer 3</span>
+                            <span class="history-image-name">Ainda vazio</span>
+                            <span class="history-selected-label">Selecionada</span>
+                        </button>
+                        <button id="originZeroChoice" class="origin-option" type="button" aria-pressed="false">
+                            <span class="origin-portrait">
+                                <svg class="avatar-placeholder" viewBox="0 0 24 24" aria-hidden="true">
+                                    <circle cx="12" cy="8" r="3.5"/>
+                                    <path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>
+                                </svg>
+                            </span>
+                            <span class="origin-option-title">Do zero</span>
+                        </button>
+                        <button id="originPhotoChoice" class="origin-option" type="button" aria-pressed="false">
+                            <span class="origin-portrait">
+                                <img id="originPhotoPreview" alt="" hidden>
+                                <svg id="originUploadIcon" class="upload-placeholder" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M12 16V4m0 0L7 9m5-5 5 5"/>
+                                    <path d="M5 15v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4"/>
+                                </svg>
+                            </span>
+                            <span class="origin-option-title">A partir de foto</span>
+                        </button>
+                    </div>
+                    <p id="historySelectionStatus" class="history-selection-status" role="status">Imagem influencer 1 selecionada.</p>
+                    <div id="originPhotoGroup" class="step-input-group origin-photo-group" hidden>
+                        <input id="originPhotoFile" type="file" accept="image/jpeg,image/png,image/webp" class="visually-hidden-file">
+                        <span id="originPhotoName">Escolha uma foto de referência.</span>
+                        <button id="chooseOriginPhoto" class="btn btn-quiet" type="button">Enviar uma imagem</button>
+                        <small>Uma única imagem, comprimida e salva no Realtime Database no campo <code>imagem_upload</code>.</small>
+                    </div>
+                </section>
+
+                <div class="creator-form-grid">
+                    <fieldset class="panel creator-section">
+                        <legend>Características físicas</legend>
+                        <div class="creator-fields">
+                            <div class="step-input-group">
+                                <label for="influencerNome">Nome (opcional)</label>
+                                <input id="influencerNome" name="nome" type="text" maxlength="80" placeholder="Opcional">
+                            </div>
+                            <div class="step-input-group">
+                                <label for="influencerSexo">Sexo (obrigatório)</label>
+                                <input id="influencerSexo" name="sexo" type="text" list="opcoesSexo" maxlength="9" placeholder="Masculino ou Feminino" required>
+                                <datalist id="opcoesSexo"><option value="masculino">Masculino</option><option value="feminino">Feminino</option></datalist>
+                            </div>
+                            <div class="step-input-group">
+                                <label for="influencerIdade">Idade (opcional)</label>
+                                <input id="influencerIdade" name="idade" type="number" min="18" max="50" step="1" placeholder="18 a 50 · aleatório">
+                            </div>
+                            <div class="step-input-group">
+                                <label for="influencerAltura">Altura em metros (opcional)</label>
+                                <input id="influencerAltura" name="altura" type="number" min="1.5" max="2.2" step="0.01" placeholder="1,50 a 2,20 · aleatório">
+                            </div>
+                            <div class="step-input-group">
+                                <label for="influencerPeso">Peso em kg (opcional)</label>
+                                <input id="influencerPeso" name="peso" type="number" min="45" max="150" step="1" placeholder="45 a 150 · aleatório">
+                            </div>
+                            <div class="step-input-group">
+                                <label for="tipoCorpo">Tipo de corpo (opcional)</label>
+                                <input id="tipoCorpo" name="tipoCorpo" list="opcoesTipoCorpo" maxlength="120" placeholder="Aleatório ao salvar">
+                                <datalist id="opcoesTipoCorpo"><option>Magro</option><option>Médio</option><option>Atlético</option><option>Musculoso</option><option>Gordo</option></datalist>
+                            </div>
+                            <div class="step-input-group">
+                                <label for="tipoPele">Tipo de pele (opcional)</label>
+                                <input id="tipoPele" name="tipoPele" list="opcoesTipoPele" maxlength="120" placeholder="Aleatório ao salvar">
+                                <datalist id="opcoesTipoPele"><option>Clara</option><option>Média</option><option>Escura</option><option>Muito escura</option><option>Oliva</option></datalist>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="panel creator-section">
+                        <legend>Cabelo</legend>
+                        <div class="creator-fields">
+                            <div class="step-input-group">
+                                <label for="tamanhoCabelo">Tamanho (opcional)</label>
+                                <input id="tamanhoCabelo" name="tamanhoCabelo" list="opcoesTamanhoCabelo" maxlength="120" placeholder="Aleatório ao salvar">
+                                <datalist id="opcoesTamanhoCabelo"><option>Longo</option><option>Médio</option><option>Curto</option></datalist>
+                            </div>
+                            <div class="step-input-group">
+                                <label for="tipoCabelo">Tipo (opcional)</label>
+                                <input id="tipoCabelo" name="tipoCabelo" list="opcoesTipoCabelo" maxlength="120" placeholder="Aleatório ao salvar">
+                                <datalist id="opcoesTipoCabelo"><option>Liso</option><option>Crespo</option><option>Ondulado</option><option>Cacheado</option></datalist>
+                            </div>
+                            <div class="step-input-group">
+                                <label for="corCabelo">Cor (opcional)</label>
+                                <input id="corCabelo" name="corCabelo" list="opcoesCorCabelo" maxlength="120" placeholder="Aleatório ao salvar">
+                                <datalist id="opcoesCorCabelo"><option>Preto</option><option>Loiro</option><option>Castanho</option><option>Vermelho</option><option>Ruivo</option><option>Grisalho</option></datalist>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="panel creator-section">
+                        <legend>Rosto</legend>
+                        <div class="creator-fields">
+                            <div class="step-input-group">
+                                <label for="corOlhos">Cor dos olhos (opcional)</label>
+                                <input id="corOlhos" name="corOlhos" list="opcoesCorOlhos" maxlength="120" placeholder="Aleatório ao salvar">
+                                <datalist id="opcoesCorOlhos"><option>Castanhos</option><option>Azuis</option><option>Verdes</option><option>Mel</option><option>Cinza</option></datalist>
+                            </div>
+                            <div class="step-input-group">
+                                <label for="sobrancelha">Sobrancelha (opcional)</label>
+                                <input id="sobrancelha" name="sobrancelha" list="opcoesSobrancelha" maxlength="120" placeholder="Aleatório ao salvar">
+                                <datalist id="opcoesSobrancelha"><option>Com um risco em um lado</option><option>Grossas</option><option>Finas</option><option>Naturais e médias</option></datalist>
+                            </div>
+                            <div class="step-input-group">
+                                <label for="nariz">Nariz (opcional)</label>
+                                <input id="nariz" name="nariz" list="opcoesNariz" maxlength="120" placeholder="Aleatório ao salvar">
+                                <datalist id="opcoesNariz"><option>Pequeno</option><option>Grande</option><option>Médio</option><option>Fino</option><option>Largo</option></datalist>
+                            </div>
+                            <div class="step-input-group">
+                                <label for="maquiagem">Maquiagem e detalhes de pele (opcional)</label>
+                                <input id="maquiagem" name="maquiagem" list="opcoesMaquiagem" maxlength="120" placeholder="Aleatório ao salvar">
+                                <datalist id="opcoesMaquiagem"><option>Sardas</option><option>Blush leve</option><option>Base natural</option><option>Maquiagem marcante</option><option>Natural</option></datalist>
+                            </div>
+                            <div id="beardField" class="step-input-group" hidden>
+                                <label for="barba">Barba (opcional)</label>
+                                <input id="barba" name="barba" list="opcoesBarba" maxlength="120" placeholder="Aleatório ao salvar">
+                                <datalist id="opcoesBarba"><option>Sem barba</option><option>Raspada</option><option>Média</option><option>Grande</option><option>Cavanhaque</option><option>Bigode</option></datalist>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="panel creator-section">
+                        <legend>Vestimentas</legend>
+                        <div class="creator-fields">
+                            <div class="step-input-group">
+                                <label for="estiloRoupa">Estilo de roupa (opcional)</label>
+                                <input id="estiloRoupa" name="estiloRoupa" list="opcoesEstiloRoupa" maxlength="120" placeholder="Aleatório ao salvar">
+                                <datalist id="opcoesEstiloRoupa"><option>Casual</option><option>Esportivo</option><option>Elegante</option><option>Streetwear</option><option>Social</option></datalist>
+                            </div>
+                            <div class="step-input-group">
+                                <label for="roupaSuperior">Parte superior (opcional)</label>
+                                <input id="roupaSuperior" name="roupaSuperior" list="opcoesRoupaSuperior" maxlength="120" placeholder="Aleatório ao salvar">
+                                <datalist id="opcoesRoupaSuperior"><option>Camisa gola V</option><option>Camisa casual</option><option>Blusa básica</option><option>Jaqueta leve</option><option>Camisa social</option></datalist>
+                            </div>
+                            <div class="step-input-group">
+                                <label for="roupaInferior">Parte inferior (opcional)</label>
+                                <input id="roupaInferior" name="roupaInferior" list="opcoesRoupaInferior" maxlength="120" placeholder="Aleatório ao salvar">
+                                <datalist id="opcoesRoupaInferior"><option>Calça jeans comum</option><option>Calça casual</option><option>Calça esportiva</option><option>Saia casual</option><option>Bermuda jeans</option></datalist>
+                            </div>
+                            <div class="step-input-group">
+                                <label for="calcados">Calçados (opcional)</label>
+                                <input id="calcados" name="calcados" list="opcoesCalcados" maxlength="120" placeholder="Aleatório ao salvar">
+                                <datalist id="opcoesCalcados"><option>Tênis sem marca comum</option><option>Tênis casual</option><option>Sapato casual</option><option>Sandália simples</option><option>Bota casual</option></datalist>
+                            </div>
+                            <div class="step-input-group">
+                                <label for="coresPredominantes">Cores predominantes (opcional)</label>
+                                <input id="coresPredominantes" name="coresPredominantes" list="opcoesCores" maxlength="120" placeholder="Aleatório ao salvar">
+                                <datalist id="opcoesCores"><option>Tons de azul</option><option>Tons neutros</option><option>Preto e branco</option><option>Tons terrosos</option><option>Cores vibrantes</option></datalist>
+                            </div>
+                            <div class="step-input-group">
+                                <label for="acessorios">Acessórios (opcional)</label>
+                                <input id="acessorios" name="acessorios" list="opcoesAcessorios" maxlength="120" placeholder="Aleatório ao salvar">
+                                <datalist id="opcoesAcessorios"><option>Relógio e colar discretos</option><option>Sem acessórios</option><option>Relógio simples</option><option>Óculos e relógio</option><option>Colar discreto</option></datalist>
+                            </div>
+                        </div>
+                    </fieldset>
+                </div>
+
+                <section class="creator-save-section">
+                    <p class="settings-help">Campos opcionais vazios serão sorteados ao salvar, exceto o nome, que pode ficar vazio. Faixas: idade de 18 a 50 anos, altura de 1,50 a 2,20 m e peso de 45 a 150 kg.</p>
+                    <button id="saveInfluencerButton" class="btn btn-purple" type="submit" disabled>Salvar</button>
+                    <p id="influencerSaveStatus" class="connection-message" role="status" aria-live="polite"></p>
+                </section>
+            </form>
+
+            <section id="promptPanel" class="panel prompt-panel" hidden>
+                <div class="step-input-group">
+                    <label for="promptInfluencer">Prompt Influencer</label>
+                    <textarea id="promptInfluencer" rows="24" readonly></textarea>
+                </div>
+            </section>
+          </section>
+
           <section id="settingsView" class="settings-view" hidden>
             <header class="topbar">
                 <div class="brand">
@@ -183,6 +419,22 @@
                     </div>
                     <p id="geminiTestResult" class="connection-message" role="status" aria-live="polite"></p>
                 </form>
+
+                <section class="panel settings-card" aria-labelledby="firebaseHeading">
+                    <header class="integration-heading">
+                        <div>
+                            <h2 id="firebaseHeading">Firebase Realtime Database</h2>
+                            <p class="settings-description">Conexão usada para salvar os cadastros de influencer.</p>
+                        </div>
+                        <span class="tag tag-purple">Realtime Database</span>
+                    </header>
+                    <p class="settings-help">A conta de serviço privada fica em <code>server/serviceAccountKey-firebase.json</code>, fora do navegador e ignorada pelo Git.</p>
+                    <div id="firebaseConfigStatus" class="config-status" role="status">Verificando configuração…</div>
+                    <div class="settings-actions">
+                        <button id="btnTestFirebase" class="btn btn-quiet" type="button">Testar conexão</button>
+                    </div>
+                    <p id="firebaseTestResult" class="connection-message" role="status" aria-live="polite"></p>
+                </section>
             </div>
           </section>
         </main>
@@ -210,6 +462,17 @@
                     </svg>
                     <span>Configurações</span>
                 </a>
+                <button id="createMenuToggle" class="nav-section create-menu-toggle" type="button" aria-expanded="true" aria-controls="createSubmenu">
+                    <span class="nav-icon" aria-hidden="true">◇</span>
+                    <span>Criar</span>
+                    <span class="nav-chevron" aria-hidden="true">⌄</span>
+                </button>
+                <div id="createSubmenu" class="nav-submenu">
+                    <a class="nav-item" href="#influencer" data-view="influencer">
+                        <span class="nav-indicator nav-diamond" aria-hidden="true"></span>
+                        Influencer
+                    </a>
+                </div>
             </nav>
             <div class="side-footer">
                 <span class="online-dot" aria-hidden="true"></span>
@@ -217,6 +480,7 @@
             </div>
         </aside>
     </div>
+    <script src="prompt-influencer.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
